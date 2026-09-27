@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSEB Live Test Platform</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; }
+        .container { max-width: 500px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { background: #27ae60; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 5px; width: 100%; }
+        button:hover { background: #219150; }
+        .option-btn { background: #3498db; margin-bottom: 10px; text-align: left; padding-left: 15px;}
+        .option-btn:hover { background: #2980b9; }
+        #quiz-screen, #leaderboard-screen, #loading-screen { display: none; }
+        .rank-list { text-align: left; padding: 0; list-style: none; }
+        .rank-list li { background: #ecf0f1; margin: 5px 0; padding: 10px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between;}
+    </style>
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+    <div class="container" id="login-screen">
+        <h1>ऑनलाइन टेस्ट में स्वागत है</h1>
+        <p>अपना नाम और विषय चुनें</p>
+        <input type="text" id="studentName" placeholder="अपना नाम लिखें...">
+        <select id="studentSubject">
+            <option value="history_class12">History (Class 12)</option>
+            <option value="english_class12">English (Class 12)</option>
+        </select>
+        <button onclick="fetchQuestions()">टेस्ट शुरू करें</button>
+    </div>
+
+    <div class="container" id="loading-screen">
+        <h2>प्रश्न लोड हो रहे हैं... कृपया प्रतीक्षा करें।</h2>
+    </div>
+
+    <div class="container" id="quiz-screen">
+        <h2 id="question-text">प्रश्न यहाँ आएगा</h2>
+        <div id="options-container"></div>
+        <p style="font-weight:bold; color: #555;">प्रश्न: <span id="q-number">1</span> / <span id="total-q"></span></p>
+    </div>
+
+    <div class="container" id="leaderboard-screen">
+        <h1>लाइव लीडरबोर्ड 🏆</h1>
+        <h2 style="color: #27ae60;">आपका स्कोर: <span id="final-score"></span></h2>
+        <ul class="rank-list" id="rankings"></ul>
+        <button onclick="location.reload()" style="margin-top:20px; background:#e67e22;">फिर से टेस्ट दें</button>
+    </div>
+
+    <script>
+        // Your Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCBwUnvVsCI5Fl05e8pwUeZwcGN0S1FFN4",
+            authDomain: "bsebquiz-8d9cd.firebaseapp.com",
+            databaseURL: "https://bsebquiz-8d9cd-default-rtdb.firebaseio.com",
+            projectId: "bsebquiz-8d9cd",
+            storageBucket: "bsebquiz-8d9cd.firebasestorage.app",
+            messagingSenderId: "954222791141",
+            appId: "1:954222791141:web:575488a4eb4f6ca31f870c"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        let questions = [];
+        let currentQIndex = 0;
+        let score = 0;
+        let playerName = "";
+        let selectedSubject = "";
+
+        function fetchQuestions() {
+            playerName = document.getElementById("studentName").value.trim();
+            selectedSubject = document.getElementById("studentSubject").value;
+
+            if (playerName === "") {
+                alert("कृपया अपना नाम लिखें!");
+                return;
+            }
+
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("loading-screen").style.display = "block";
+
+            // Firebase से लाइव सवाल लाना
+            db.ref('Questions/' + selectedSubject).once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Firebase object को Array में बदलना
+                    questions = Object.values(data);
+                    
+                    document.getElementById("loading-screen").style.display = "none";
+                    document.getElementById("quiz-screen").style.display = "block";
+                    document.getElementById("total-q").innerText = questions.length;
+                    loadQuestion();
+                } else {
+                    document.getElementById("loading-screen").innerHTML = `
+                        <h2 style="color:red;">अभी इस विषय में कोई प्रश्न नहीं जोड़े गए हैं!</h2>
+                        <button onclick='location.reload()'>वापस जाएं</button>
+                    `;
+                }
+            }).catch((error) => {
+                alert("डेटाबेस से जुड़ने में त्रुटि: " + error.message);
+                location.reload();
+            });
+        }
+
+        function loadQuestion() {
+            const q = questions[currentQIndex];
+            document.getElementById("question-text").innerText = q.question;
+            document.getElementById("q-number").innerText = currentQIndex + 1;
+            
+            const optionsContainer = document.getElementById("options-container");
+            optionsContainer.innerHTML = "";
+            
+            q.options.forEach(opt => {
+                if(opt && opt.trim() !== "") { // खाली विकल्पों को हटाएँ
+                    const btn = document.createElement("button");
+                    btn.className = "option-btn";
+                    btn.innerText = opt;
+                    btn.onclick = () => checkAnswer(opt, q.answer);
+                    optionsContainer.appendChild(btn);
+                }
+            });
+        }
+
+        function checkAnswer(selected, correct) {
+            if (selected === correct) {
+                score++;
+            }
+            currentQIndex++;
+            
+            if (currentQIndex < questions.length) {
+                loadQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        function endQuiz() {
+            document.getElementById("quiz-screen").style.display = "none";
+            document.getElementById("leaderboard-screen").style.display = "block";
+            document.getElementById("final-score").innerText = score + " / " + questions.length;
+
+            // Score Firebase में सेव करना
+            db.ref('Leaderboard/' + selectedSubject).push({
+                name: playerName,
+                score: score,
+                timestamp: Date.now()
+            });
+
+            showLiveLeaderboard();
+        }
+
+        function showLiveLeaderboard() {
+            db.ref('Leaderboard/' + selectedSubject).on('value', (snapshot) => {
+                const rankingsList = document.getElementById("rankings");
+                rankingsList.innerHTML = "";
+                let results = [];
+                
+                snapshot.forEach((child) => {
+                    results.push(child.val());
+                });
+                
+                // ज्यादा स्कोर वाले को ऊपर रखना
+                results.sort((a, b) => b.score - a.score);
+
+                results.forEach((data, index) => {
+                    const li = document.createElement("li");
+                    
+                    // रैंक के अनुसार मेडल दिखाना
+                    let rankIcon = `#${index + 1}`;
+                    if(index === 0) rankIcon = "🥇";
+                    else if(index === 1) rankIcon = "🥈";
+                    else if(index === 2) rankIcon = "🥉";
+
+                    li.innerHTML = `<span>${rankIcon} ${data.name}</span> <span>${data.score} Marks</span>`;
+                    rankingsList.appendChild(li);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
