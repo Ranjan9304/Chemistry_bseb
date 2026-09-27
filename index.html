@@ -5,40 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BSEB Live Test Platform</title>
     <style>
-        body { font-family: 'Arial', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; }
-        .container { max-width: 500px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        /* Anti-Copy CSS */
+        body { font-family: 'Arial', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;}
+        
+        /* Watermark CSS */
+        #watermark { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; pointer-events: none; opacity: 0.06; font-size: 28px; transform: rotate(-35deg); overflow: hidden; white-space: pre-wrap; color: #000; font-weight: bold;}
+
+        .container { max-width: 600px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; z-index: 10; }
         h1 { color: #2c3e50; font-size: 24px;}
         input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        button { background: #27ae60; color: white; border: none; padding: 12px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 5px; width: 100%; font-weight:bold;}
+        button { background: #27ae60; color: white; border: none; padding: 10px 15px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 5px; font-weight:bold;}
         button:hover { background: #219150; }
-        .option-btn { background: #3498db; margin-bottom: 10px; text-align: left; padding-left: 15px;}
-        .option-btn:hover { background: #2980b9; }
+        
+        .option-btn { display: block; width: 100%; background: #ecf0f1; color: #333; margin-bottom: 10px; text-align: left; padding: 15px; border: 2px solid #bdc3c7;}
+        .option-btn.selected { background: #3498db; color: white; border-color: #2980b9;}
+        
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px;}
         #quiz-screen, #leaderboard-screen, #loading-screen { display: none; }
         .rank-list { text-align: left; padding: 0; list-style: none; }
         .rank-list li { background: #ecf0f1; margin: 5px 0; padding: 10px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between;}
+        
+        .timer-box { font-size: 18px; font-weight: bold; color: #e74c3c; margin-bottom: 15px; border: 2px solid #e74c3c; padding: 5px; border-radius: 5px; display: inline-block;}
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-<body>
+<body oncontextmenu="return false;"> <!-- Right Click Disabled -->
+
+    <div id="watermark"></div>
 
     <div class="container" id="login-screen">
-        <h1>ऑनलाइन टेस्ट में स्वागत है</h1>
+        <h1>ऑनलाइन टेस्ट (Pro)</h1>
+        <p style="color:red; font-size: 12px; font-weight: bold;">(चेतावनी: टेस्ट के दौरान स्क्रीन बदलने या ऐप से बाहर जाने पर टेस्ट स्वतः सबमिट हो जाएगा)</p>
         <input type="text" id="studentName" placeholder="अपना नाम लिखें...">
         
+        <!-- विषय ऑटोमैटिक लोड होंगे -->
         <select id="studentSubject" onchange="loadAvailableTests()">
-            <option value="">-- विषय चुनें --</option>
-            <option value="History_Class12">History (Class 12)</option>
-            <option value="English_Class12">English (Class 12)</option>
-            <option value="Geography_Class12">Geography (Class 12)</option>
-            <option value="Hindi_Class12">Hindi (Class 12)</option>
+            <option value="">-- लोड हो रहा है... --</option>
         </select>
 
         <select id="testNameSelect">
             <option value="">-- पहले विषय चुनें --</option>
         </select>
 
-        <button onclick="startTest()">टेस्ट शुरू करें</button>
+        <button onclick="startTest()" style="width:100%;">टेस्ट शुरू करें</button>
     </div>
 
     <div class="container" id="loading-screen">
@@ -46,17 +56,25 @@
     </div>
 
     <div class="container" id="quiz-screen">
-        <h3 id="test-title" style="color:#e67e22;"></h3>
-        <h2 id="question-text" style="font-size: 20px;">प्रश्न यहाँ आएगा</h2>
+        <div class="timer-box" id="timer-display">समय: 00:00</div>
+        <h3 id="test-title" style="color:#e67e22; margin-top:0;"></h3>
+        <h2 id="question-text" style="font-size: 18px; text-align:left;">प्रश्न यहाँ आएगा</h2>
+        
         <div id="options-container"></div>
-        <p style="font-weight:bold; color: #555;">प्रश्न: <span id="q-number">1</span> / <span id="total-q"></span></p>
+        
+        <div class="nav-buttons">
+            <button id="prev-btn" onclick="prevQuestion()" style="background:#7f8c8d;">पिछला (Prev)</button>
+            <span style="font-weight:bold; color: #555; align-self: center;"><span id="q-number">1</span> / <span id="total-q"></span></span>
+            <button id="next-btn" onclick="nextQuestion()" style="background:#2980b9;">अगला (Next)</button>
+        </div>
+        <button onclick="submitQuiz()" style="width:100%; background:#e74c3c; margin-top:20px;">टेस्ट सबमिट करें (Submit)</button>
     </div>
 
     <div class="container" id="leaderboard-screen">
         <h1>लाइव लीडरबोर्ड 🏆</h1>
         <h2 style="color: #27ae60;">आपका स्कोर: <span id="final-score"></span></h2>
         <ul class="rank-list" id="rankings"></ul>
-        <button onclick="location.reload()" style="margin-top:20px; background:#e67e22;">अन्य टेस्ट दें</button>
+        <button onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर जाएं</button>
     </div>
 
     <script>
@@ -75,12 +93,51 @@
 
         let questions = [];
         let currentQIndex = 0;
-        let score = 0;
         let playerName = "";
         let selectedSubject = "";
         let selectedTestName = "";
+        
+        let userAnswers = {}; 
+        let isTakingTest = false;
+        let timerInterval;
+        let timeRemaining = 0;
 
-        // विषय चुनने पर डेटाबेस से उस विषय के सभी टेस्ट ढूंढ कर लाना
+        // Anti-Copy 
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'u' || e.key === 'p')) {
+                e.preventDefault();
+            }
+        });
+
+        // Anti-Cheat (Tab Switch)
+        document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState === 'hidden' && isTakingTest) {
+                alert("⚠️ चीटिंग अलर्ट! आपने टेस्ट के दौरान टैब या ऐप बदला। आपका टेस्ट अपने आप सबमिट किया जा रहा है।");
+                submitQuiz();
+            }
+        });
+
+        // ===========================================
+        // विषय ऑटोमैटिक लोड करना (नया फीचर)
+        // ===========================================
+        window.onload = function() {
+            db.ref('Quizzes').on('value', (snapshot) => {
+                const subSelect = document.getElementById("studentSubject");
+                subSelect.innerHTML = '<option value="">-- विषय चुनें --</option>';
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const option = document.createElement("option");
+                        option.value = child.key;
+                        // '_' को हटाकर स्पेस दें ताकि सुंदर दिखे (जैसे History_Class12 -> History Class12)
+                        option.innerText = child.key.replace(/_/g, " "); 
+                        subSelect.appendChild(option);
+                    });
+                } else {
+                    subSelect.innerHTML = '<option value="">कोई विषय उपलब्ध नहीं है</option>';
+                }
+            });
+        };
+
         function loadAvailableTests() {
             selectedSubject = document.getElementById("studentSubject").value;
             const testDropdown = document.getElementById("testNameSelect");
@@ -89,7 +146,6 @@
                 testDropdown.innerHTML = '<option value="">-- पहले विषय चुनें --</option>';
                 return;
             }
-
             testDropdown.innerHTML = '<option value="">लोड हो रहा है...</option>';
 
             db.ref('Quizzes/' + selectedSubject).once('value', (snapshot) => {
@@ -117,17 +173,29 @@
                 return;
             }
 
+            document.getElementById("watermark").innerText = (playerName + " 📱 ").repeat(400);
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("loading-screen").style.display = "block";
 
-            // टेस्ट के प्रश्न डाउनलोड करना
             db.ref('Quizzes/' + selectedSubject + '/' + selectedTestName).once('value', (snapshot) => {
                 if (snapshot.exists()) {
-                    questions = snapshot.val();
+                    const data = snapshot.val();
+                    
+                    if(Array.isArray(data)) {
+                        questions = data;
+                        timeRemaining = questions.length * 60; 
+                    } else {
+                        questions = data.questions;
+                        timeRemaining = data.timer * 60; 
+                    }
+
                     document.getElementById("loading-screen").style.display = "none";
                     document.getElementById("quiz-screen").style.display = "block";
                     document.getElementById("test-title").innerText = selectedTestName;
                     document.getElementById("total-q").innerText = questions.length;
+                    
+                    isTakingTest = true;
+                    startTimer();
                     loadQuestion();
                 } else {
                     alert("टेस्ट लोड नहीं हो सका!");
@@ -136,39 +204,81 @@
             });
         }
 
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                let m = Math.floor(timeRemaining / 60);
+                let s = timeRemaining % 60;
+                document.getElementById("timer-display").innerText = `समय: ${m}:${s < 10 ? '0'+s : s}`;
+                
+                if(timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    alert("समय समाप्त! आपका टेस्ट ऑटो-सबमिट हो रहा है।");
+                    submitQuiz();
+                }
+            }, 1000);
+        }
+
         function loadQuestion() {
             const q = questions[currentQIndex];
             document.getElementById("question-text").innerText = q.question;
             document.getElementById("q-number").innerText = currentQIndex + 1;
             
+            document.getElementById("prev-btn").style.visibility = (currentQIndex === 0) ? "hidden" : "visible";
+            document.getElementById("next-btn").style.visibility = (currentQIndex === questions.length - 1) ? "hidden" : "visible";
+
             const optionsContainer = document.getElementById("options-container");
             optionsContainer.innerHTML = "";
             
             q.options.forEach(opt => {
-                const btn = document.createElement("button");
-                btn.className = "option-btn";
-                btn.innerText = opt;
-                btn.onclick = () => checkAnswer(opt, q.answer);
-                optionsContainer.appendChild(btn);
+                if(opt && opt.trim() !== "") {
+                    const btn = document.createElement("button");
+                    btn.className = "option-btn";
+                    if(userAnswers[currentQIndex] === opt) {
+                        btn.classList.add("selected");
+                    }
+                    btn.innerText = opt;
+                    btn.onclick = () => selectOption(opt);
+                    optionsContainer.appendChild(btn);
+                }
             });
         }
 
-        function checkAnswer(selected, correct) {
-            if (selected === correct) score++;
-            currentQIndex++;
-            if (currentQIndex < questions.length) {
+        function selectOption(selectedOpt) {
+            userAnswers[currentQIndex] = selectedOpt;
+            loadQuestion(); 
+        }
+
+        function nextQuestion() {
+            if(currentQIndex < questions.length - 1) {
+                currentQIndex++;
                 loadQuestion();
-            } else {
-                endQuiz();
             }
         }
 
-        function endQuiz() {
+        function prevQuestion() {
+            if(currentQIndex > 0) {
+                currentQIndex--;
+                loadQuestion();
+            }
+        }
+
+        function submitQuiz() {
+            isTakingTest = false;
+            clearInterval(timerInterval);
+            document.getElementById("watermark").style.display = "none"; 
+
+            let score = 0;
+            questions.forEach((q, index) => {
+                if(userAnswers[index] === q.answer) {
+                    score++;
+                }
+            });
+
             document.getElementById("quiz-screen").style.display = "none";
             document.getElementById("leaderboard-screen").style.display = "block";
             document.getElementById("final-score").innerText = score + " / " + questions.length;
 
-            // लीडरबोर्ड में टेस्ट के नाम के साथ स्कोर सेव करना
             db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName).push({
                 name: playerName,
                 score: score,
