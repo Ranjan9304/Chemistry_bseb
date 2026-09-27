@@ -21,21 +21,25 @@
 
     <div class="container">
         <h1>Admin Panel 🛠️ (Bulk Upload)</h1>
-        <p>विषय चुनें, टेस्ट का नाम लिखें और JSON कोड पेस्ट करें</p>
+        <p>विषय, टेस्ट का नाम, समय (मिनट में) और JSON कोड डालें</p>
         
-        <select id="subjectSelect">
+        <select id="subjectSelect" onchange="checkNewSubject()">
             <option value="History_Class12">History (Class 12)</option>
             <option value="English_Class12">English (Class 12)</option>
             <option value="Geography_Class12">Geography (Class 12)</option>
             <option value="Hindi_Class12">Hindi (Class 12)</option>
+            <option value="ADD_NEW" style="font-weight:bold; color:blue;">+ नया विषय जोड़ें...</option>
         </select>
 
-        <input type="text" id="testName" placeholder="टेस्ट का नाम (जैसे: Chapter 1 & 2 Mock Test)">
+        <!-- यह बॉक्स तभी दिखेगा जब 'नया विषय जोड़ें' चुना जाएगा -->
+        <input type="text" id="newSubjectInput" placeholder="नए विषय का नाम (जैसे: Physics_Class12)" style="display:none; border-color:blue;">
+
+        <input type="text" id="testName" placeholder="टेस्ट का नाम (जैसे: Full Syllabus Mock Test)">
+        <input type="number" id="testDuration" placeholder="टेस्ट का समय (मिनटों में, जैसे: 30)">
         
-        <!-- यहाँ एक साथ सारे प्रश्न पेस्ट होंगे -->
         <textarea id="bulkData" rows="10" placeholder="यहाँ प्रश्नों का JSON कोड पेस्ट करें..."></textarea>
         
-        <button onclick="saveBulkTest()">🚀 एक साथ पूरा टेस्ट अपलोड करें</button>
+        <button onclick="saveBulkTest()">🚀 टेस्ट पब्लिश करें</button>
         <p class="success" id="msgSuccess">टेस्ट सफलतापूर्वक अपलोड हो गया!</p>
         <p class="error" id="msgError"></p>
     </div>
@@ -51,14 +55,34 @@
             appId: "1:954222791141:web:575488a4eb4f6ca31f870c"
         };
         
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.database();
 
+        // नया विषय चुनने पर बॉक्स दिखाने/छुपाने का फंक्शन
+        function checkNewSubject() {
+            const selectValue = document.getElementById("subjectSelect").value;
+            const newSubInput = document.getElementById("newSubjectInput");
+            if(selectValue === "ADD_NEW") {
+                newSubInput.style.display = "block";
+            } else {
+                newSubInput.style.display = "none";
+            }
+        }
+
         function saveBulkTest() {
-            const subject = document.getElementById("subjectSelect").value;
+            let subject = document.getElementById("subjectSelect").value;
+            
+            // अगर नया विषय चुना गया है, तो उसका नाम लें
+            if(subject === "ADD_NEW") {
+                subject = document.getElementById("newSubjectInput").value.trim().replace(/\s+/g, "_"); // स्पेस को _ में बदलें
+                if(subject === "") {
+                    alert("कृपया नए विषय का नाम लिखें!");
+                    return;
+                }
+            }
+
             const testName = document.getElementById("testName").value.trim();
+            const duration = document.getElementById("testDuration").value.trim();
             const jsonText = document.getElementById("bulkData").value.trim();
 
             const msgError = document.getElementById("msgError");
@@ -66,21 +90,31 @@
             msgError.style.display = "none";
             msgSuccess.style.display = "none";
 
-            if(testName === "" || jsonText === "") {
-                msgError.innerText = "कृपया टेस्ट का नाम लिखें और कोड पेस्ट करें!";
+            if(testName === "" || jsonText === "" || duration === "") {
+                msgError.innerText = "कृपया सभी बॉक्स भरें (नाम, समय और कोड)!";
                 msgError.style.display = "block";
                 return;
             }
 
             try {
-                // कोड को चेक कर रहा है कि वो सही JSON है या नहीं
                 const questionsArray = JSON.parse(jsonText);
                 
-                // डेटाबेस में नए टेस्ट के नाम से सेव करना
-                db.ref('Quizzes/' + subject + '/' + testName).set(questionsArray)
+                const testData = {
+                    timer: parseInt(duration),
+                    questions: questionsArray
+                };
+                
+                db.ref('Quizzes/' + subject + '/' + testName).set(testData)
                 .then(() => {
                     document.getElementById("testName").value = "";
+                    document.getElementById("testDuration").value = "";
                     document.getElementById("bulkData").value = "";
+                    document.getElementById("newSubjectInput").value = "";
+                    
+                    // अगर नया विषय जोड़ा था तो वापस डिफ़ॉल्ट पर सेट करें
+                    document.getElementById("subjectSelect").selectedIndex = 0;
+                    document.getElementById("newSubjectInput").style.display = "none";
+
                     msgSuccess.style.display = "block";
                     setTimeout(() => msgSuccess.style.display = "none", 4000);
                 }).catch((error) => {
@@ -89,7 +123,7 @@
                 });
 
             } catch (e) {
-                msgError.innerText = "एरर! आपके द्वारा पेस्ट किया गया कोड सही फॉर्मेट (JSON) में नहीं है।";
+                msgError.innerText = "एरर! आपके द्वारा पेस्ट किया गया कोड सही (JSON) फॉर्मेट में नहीं है।";
                 msgError.style.display = "block";
             }
         }
