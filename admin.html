@@ -3,45 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Add Questions</title>
+    <title>Admin Panel - Bulk Upload Test</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; text-align: center; }
-        .container { max-width: 500px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;}
-        button { background: #e74c3c; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; width: 100%; margin-top: 10px;}
+        .container { max-width: 600px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input, select, textarea { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; font-family: monospace;}
+        button { background: #e74c3c; color: white; border: none; padding: 12px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; width: 100%; margin-top: 10px; font-weight:bold;}
         button:hover { background: #c0392b; }
         .success { color: green; display: none; margin-top: 10px; font-weight: bold;}
+        .error { color: red; display: none; margin-top: 10px; font-weight: bold;}
     </style>
     
-    <!-- Firebase CDN -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
     <div class="container">
-        <h1>Admin Panel 🛠️</h1>
-        <p>नया प्रश्न जोड़ें (पुराने प्रश्न नहीं मिटेंगे)</p>
+        <h1>Admin Panel 🛠️ (Bulk Upload)</h1>
+        <p>विषय चुनें, टेस्ट का नाम लिखें और JSON कोड पेस्ट करें</p>
         
         <select id="subjectSelect">
-            <option value="history_class12">History (Class 12)</option>
-            <option value="english_class12">English (Class 12)</option>
-            <!-- आप चाहें तो यहाँ और भी सब्जेक्ट जोड़ सकते हैं -->
+            <option value="History_Class12">History (Class 12)</option>
+            <option value="English_Class12">English (Class 12)</option>
+            <option value="Geography_Class12">Geography (Class 12)</option>
+            <option value="Hindi_Class12">Hindi (Class 12)</option>
         </select>
 
-        <input type="text" id="qText" placeholder="प्रश्न (Question)">
-        <input type="text" id="opt1" placeholder="विकल्प A">
-        <input type="text" id="opt2" placeholder="विकल्प B">
-        <input type="text" id="opt3" placeholder="विकल्प C">
-        <input type="text" id="opt4" placeholder="विकल्प D">
-        <input type="text" id="ansText" placeholder="सही उत्तर (Correct Answer)">
+        <input type="text" id="testName" placeholder="टेस्ट का नाम (जैसे: Chapter 1 & 2 Mock Test)">
         
-        <button onclick="addQuestion()">प्रश्न जोड़ें (Add Question)</button>
-        <p class="success" id="msg">प्रश्न सफलतापूर्वक जुड़ गया!</p>
+        <!-- यहाँ एक साथ सारे प्रश्न पेस्ट होंगे -->
+        <textarea id="bulkData" rows="10" placeholder="यहाँ प्रश्नों का JSON कोड पेस्ट करें..."></textarea>
+        
+        <button onclick="saveBulkTest()">🚀 एक साथ पूरा टेस्ट अपलोड करें</button>
+        <p class="success" id="msgSuccess">टेस्ट सफलतापूर्वक अपलोड हो गया!</p>
+        <p class="error" id="msgError"></p>
     </div>
 
     <script>
-        // Your Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCBwUnvVsCI5Fl05e8pwUeZwcGN0S1FFN4",
             authDomain: "bsebquiz-8d9cd.firebaseapp.com",
@@ -57,41 +56,42 @@
         }
         const db = firebase.database();
 
-        function addQuestion() {
+        function saveBulkTest() {
             const subject = document.getElementById("subjectSelect").value;
-            const q = document.getElementById("qText").value.trim();
-            const o1 = document.getElementById("opt1").value.trim();
-            const o2 = document.getElementById("opt2").value.trim();
-            const o3 = document.getElementById("opt3").value.trim();
-            const o4 = document.getElementById("opt4").value.trim();
-            const ans = document.getElementById("ansText").value.trim();
+            const testName = document.getElementById("testName").value.trim();
+            const jsonText = document.getElementById("bulkData").value.trim();
 
-            if(q === "" || o1 === "" || ans === "") {
-                alert("कृपया कम से कम प्रश्न, पहला विकल्प और सही उत्तर जरूर भरें!");
+            const msgError = document.getElementById("msgError");
+            const msgSuccess = document.getElementById("msgSuccess");
+            msgError.style.display = "none";
+            msgSuccess.style.display = "none";
+
+            if(testName === "" || jsonText === "") {
+                msgError.innerText = "कृपया टेस्ट का नाम लिखें और कोड पेस्ट करें!";
+                msgError.style.display = "block";
                 return;
             }
 
-            // Firebase में डेटा जोड़ना
-            db.ref('Questions/' + subject).push({
-                question: q,
-                options: [o1, o2, o3, o4],
-                answer: ans
-            }).then(() => {
-                // सफलता पर बॉक्स खाली करें
-                document.getElementById("qText").value = "";
-                document.getElementById("opt1").value = "";
-                document.getElementById("opt2").value = "";
-                document.getElementById("opt3").value = "";
-                document.getElementById("opt4").value = "";
-                document.getElementById("ansText").value = "";
+            try {
+                // कोड को चेक कर रहा है कि वो सही JSON है या नहीं
+                const questionsArray = JSON.parse(jsonText);
+                
+                // डेटाबेस में नए टेस्ट के नाम से सेव करना
+                db.ref('Quizzes/' + subject + '/' + testName).set(questionsArray)
+                .then(() => {
+                    document.getElementById("testName").value = "";
+                    document.getElementById("bulkData").value = "";
+                    msgSuccess.style.display = "block";
+                    setTimeout(() => msgSuccess.style.display = "none", 4000);
+                }).catch((error) => {
+                    msgError.innerText = "डेटाबेस एरर: " + error.message;
+                    msgError.style.display = "block";
+                });
 
-                // सफलता का मैसेज दिखाएं
-                const msg = document.getElementById("msg");
-                msg.style.display = "block";
-                setTimeout(() => msg.style.display = "none", 3000);
-            }).catch((error) => {
-                alert("प्रश्न जोड़ने में त्रुटि हुई: " + error.message);
-            });
+            } catch (e) {
+                msgError.innerText = "एरर! आपके द्वारा पेस्ट किया गया कोड सही फॉर्मेट (JSON) में नहीं है।";
+                msgError.style.display = "block";
+            }
         }
     </script>
 </body>
