@@ -3,81 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BSEB Live Test Platform</title>
+    <title>BSEB Pro Test Platform</title>
     <style>
-        /* Anti-Copy CSS */
-        body { font-family: 'Arial', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;}
+        /* Strict Anti-Copy & Security CSS */
+        body { 
+            font-family: 'Arial', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; 
+            user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+        }
         
         /* Watermark CSS */
-        #watermark { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; pointer-events: none; opacity: 0.06; font-size: 28px; transform: rotate(-35deg); overflow: hidden; white-space: pre-wrap; color: #000; font-weight: bold;}
+        #watermark { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; 
+            pointer-events: none; opacity: 0.05; font-size: 24px; transform: rotate(-30deg); 
+            overflow: hidden; white-space: pre-wrap; color: #000; font-weight: bold; display: none;
+        }
 
-        .container { max-width: 600px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; z-index: 10; }
+        .container { max-width: 600px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; z-index: 10; }
         h1 { color: #2c3e50; font-size: 24px;}
         input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
         button { background: #27ae60; color: white; border: none; padding: 10px 15px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 5px; font-weight:bold;}
         button:hover { background: #219150; }
         
-        .option-btn { display: block; width: 100%; background: #ecf0f1; color: #333; margin-bottom: 10px; text-align: left; padding: 15px; border: 2px solid #bdc3c7;}
+        .option-btn { display: block; width: 100%; background: #ecf0f1; color: #333; margin-bottom: 10px; text-align: left; padding: 15px; border: 2px solid #bdc3c7; border-radius:5px;}
         .option-btn.selected { background: #3498db; color: white; border-color: #2980b9;}
         
         .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px;}
-        #quiz-screen, #leaderboard-screen, #loading-screen { display: none; }
-        .rank-list { text-align: left; padding: 0; list-style: none; }
-        .rank-list li { background: #ecf0f1; margin: 5px 0; padding: 10px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between;}
+        #quiz-screen, #leaderboard-screen, #loading-screen, #review-screen { display: none; }
         
-        .timer-box { font-size: 18px; font-weight: bold; color: #e74c3c; margin-bottom: 15px; border: 2px solid #e74c3c; padding: 5px; border-radius: 5px; display: inline-block;}
+        .rank-list { text-align: left; padding: 0; list-style: none; margin-top: 15px;}
+        .rank-list li { background: #ecf0f1; margin: 6px 0; padding: 12px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between; border-left: 5px solid #27ae60;}
+        
+        .timer-box { font-size: 18px; font-weight: bold; color: #e74c3c; margin-bottom: 15px; border: 2px solid #e74c3c; padding: 5px 15px; border-radius: 5px; display: inline-block; background: #fdedec;}
+        
+        .review-box { padding: 15px; margin-bottom: 15px; border-radius: 5px; text-align: left; border: 1px solid #ccc;}
+        .review-correct { background-color: #e8f8f5; border-left: 5px solid #2ecc71;}
+        .review-wrong { background-color: #fdedec; border-left: 5px solid #e74c3c;}
+        .review-skipped { background-color: #f2f2f2; border-left: 5px solid #95a5a6;}
     </style>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-<body oncontextmenu="return false;"> <!-- Right Click Disabled -->
+<!-- Right Click & Copy Disabled -->
+<body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onpaste="return false;">
 
     <div id="watermark"></div>
 
+    <!-- Login Screen -->
     <div class="container" id="login-screen">
-        <h1>ऑनलाइन टेस्ट (Pro)</h1>
-        <p style="color:red; font-size: 12px; font-weight: bold;">(चेतावनी: टेस्ट के दौरान स्क्रीन बदलने या ऐप से बाहर जाने पर टेस्ट स्वतः सबमिट हो जाएगा)</p>
-        <input type="text" id="studentName" placeholder="अपना नाम लिखें...">
+        <h1>ऑनलाइन टेस्ट (Pro Platform)</h1>
+        <p style="color:red; font-size: 13px; font-weight: bold; border: 1px solid red; padding:5px; border-radius:5px;">
+            ⚠️ चेतावनी: टेस्ट के दौरान कॉल उठाने, टैब बदलने या ऐप से बाहर जाने पर टेस्ट अपने-आप सबमिट हो जाएगा।
+        </p>
+        <input type="text" id="studentName" placeholder="अपना पूरा नाम लिखें...">
         
-        <!-- विषय ऑटोमैटिक लोड होंगे -->
         <select id="studentSubject" onchange="loadAvailableTests()">
-            <option value="">-- लोड हो रहा है... --</option>
+            <option value="">-- विषय लोड हो रहे हैं... --</option>
         </select>
 
         <select id="testNameSelect">
             <option value="">-- पहले विषय चुनें --</option>
         </select>
 
-        <button onclick="startTest()" style="width:100%;">टेस्ट शुरू करें</button>
+        <button onclick="startTest()" style="width:100%; padding:15px; font-size: 18px;">टेस्ट शुरू करें</button>
     </div>
 
+    <!-- Loading Screen -->
     <div class="container" id="loading-screen">
         <h2>कृपया प्रतीक्षा करें...</h2>
     </div>
 
+    <!-- Quiz Screen -->
     <div class="container" id="quiz-screen">
         <div class="timer-box" id="timer-display">समय: 00:00</div>
-        <h3 id="test-title" style="color:#e67e22; margin-top:0;"></h3>
-        <h2 id="question-text" style="font-size: 18px; text-align:left;">प्रश्न यहाँ आएगा</h2>
+        <h3 id="test-title" style="color:#e67e22; margin-top:0; border-bottom: 2px dashed #ccc; padding-bottom:10px;"></h3>
+        <h2 id="question-text" style="font-size: 19px; text-align:left; color:#333;">प्रश्न यहाँ आएगा</h2>
         
         <div id="options-container"></div>
         
         <div class="nav-buttons">
-            <button id="prev-btn" onclick="prevQuestion()" style="background:#7f8c8d;">पिछला (Prev)</button>
-            <span style="font-weight:bold; color: #555; align-self: center;"><span id="q-number">1</span> / <span id="total-q"></span></span>
-            <button id="next-btn" onclick="nextQuestion()" style="background:#2980b9;">अगला (Next)</button>
+            <button id="prev-btn" onclick="prevQuestion()" style="background:#7f8c8d;">◀ पिछला</button>
+            <span style="font-weight:bold; color: #555; align-self: center; font-size: 18px;"><span id="q-number">1</span> / <span id="total-q"></span></span>
+            <button id="next-btn" onclick="nextQuestion()" style="background:#2980b9;">अगला ▶</button>
         </div>
-        <button onclick="submitQuiz()" style="width:100%; background:#e74c3c; margin-top:20px;">टेस्ट सबमिट करें (Submit)</button>
+        <button onclick="confirmSubmit()" style="width:100%; background:#e74c3c; margin-top:25px; padding: 12px;">✅ टेस्ट सबमिट करें</button>
     </div>
 
+    <!-- Leaderboard Screen -->
     <div class="container" id="leaderboard-screen">
         <h1>लाइव लीडरबोर्ड 🏆</h1>
-        <h2 style="color: #27ae60;">आपका स्कोर: <span id="final-score"></span></h2>
+        <h2 style="color: #27ae60; background:#e8f8f5; padding:10px; border-radius:5px;">आपका स्कोर: <span id="final-score"></span></h2>
+        
+        <!-- नया बटन: सही-गलत देखने के लिए -->
+        <button onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
+        
         <ul class="rank-list" id="rankings"></ul>
         <button onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर जाएं</button>
     </div>
 
+    <!-- Review Screen (सही/गलत चेक करने के लिए) -->
+    <div class="container" id="review-screen">
+        <h1>टेस्ट रिपोर्ट (सही/गलत) 📊</h1>
+        <div id="review-container" style="max-height: 400px; overflow-y: auto; padding-right:10px;"></div>
+        <button onclick="backToLeaderboard()" style="width:100%; margin-top:15px;">⬅ लीडरबोर्ड पर वापस जाएं</button>
+    </div>
+
     <script>
+        // Your Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCBwUnvVsCI5Fl05e8pwUeZwcGN0S1FFN4",
             authDomain: "bsebquiz-8d9cd.firebaseapp.com",
@@ -102,24 +134,22 @@
         let timerInterval;
         let timeRemaining = 0;
 
-        // Anti-Copy 
+        // Anti-Copy (Keyboard Shortcuts Block)
         document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'u' || e.key === 'p')) {
+            if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
             }
         });
 
-        // Anti-Cheat (Tab Switch)
+        // Strict Anti-Cheat (Tab Switch / App Minimise Detect)
         document.addEventListener("visibilitychange", function() {
             if (document.visibilityState === 'hidden' && isTakingTest) {
-                alert("⚠️ चीटिंग अलर्ट! आपने टेस्ट के दौरान टैब या ऐप बदला। आपका टेस्ट अपने आप सबमिट किया जा रहा है।");
-                submitQuiz();
+                alert("⚠️ चीटिंग अलर्ट! आपने टेस्ट के दौरान टैब या स्क्रीन बदली। आपका टेस्ट तुरंत सबमिट किया जा रहा है।");
+                submitQuiz(true); // True means auto-submitted due to cheat
             }
         });
 
-        // ===========================================
-        // विषय ऑटोमैटिक लोड करना (नया फीचर)
-        // ===========================================
+        // विषय लोड करना
         window.onload = function() {
             db.ref('Quizzes').on('value', (snapshot) => {
                 const subSelect = document.getElementById("studentSubject");
@@ -128,7 +158,6 @@
                     snapshot.forEach(child => {
                         const option = document.createElement("option");
                         option.value = child.key;
-                        // '_' को हटाकर स्पेस दें ताकि सुंदर दिखे (जैसे History_Class12 -> History Class12)
                         option.innerText = child.key.replace(/_/g, " "); 
                         subSelect.appendChild(option);
                     });
@@ -173,7 +202,10 @@
                 return;
             }
 
-            document.getElementById("watermark").innerText = (playerName + " 📱 ").repeat(400);
+            // Watermark On
+            document.getElementById("watermark").style.display = "block";
+            document.getElementById("watermark").innerText = (playerName + " 📱 ").repeat(300);
+
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("loading-screen").style.display = "block";
 
@@ -214,7 +246,7 @@
                 if(timeRemaining <= 0) {
                     clearInterval(timerInterval);
                     alert("समय समाप्त! आपका टेस्ट ऑटो-सबमिट हो रहा है।");
-                    submitQuiz();
+                    submitQuiz(false);
                 }
             }, 1000);
         }
@@ -263,7 +295,13 @@
             }
         }
 
-        function submitQuiz() {
+        function confirmSubmit() {
+            if(confirm("क्या आप वाकई टेस्ट सबमिट करना चाहते हैं?")) {
+                submitQuiz(false);
+            }
+        }
+
+        function submitQuiz(isCheat = false) {
             isTakingTest = false;
             clearInterval(timerInterval);
             document.getElementById("watermark").style.display = "none"; 
@@ -275,12 +313,15 @@
                 }
             });
 
+            // अगर बच्चे ने चीटिंग की कोशिश की है तो नाम के आगे (Cheated) लगा दें
+            let finalName = isCheat ? playerName + " (⚠️ Cheated)" : playerName;
+
             document.getElementById("quiz-screen").style.display = "none";
             document.getElementById("leaderboard-screen").style.display = "block";
             document.getElementById("final-score").innerText = score + " / " + questions.length;
 
             db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName).push({
-                name: playerName,
+                name: finalName,
                 score: score,
                 timestamp: Date.now()
             });
@@ -295,6 +336,8 @@
                 let results = [];
                 
                 snapshot.forEach((child) => results.push(child.val()));
+                
+                // रैंक को सही तरीके से सॉर्ट करना (ज्यादा नंबर वाला ऊपर)
                 results.sort((a, b) => b.score - a.score);
 
                 results.forEach((data, index) => {
@@ -308,6 +351,50 @@
                     rankingsList.appendChild(li);
                 });
             });
+        }
+
+        // ==========================================
+        // नया फीचर: रिजल्ट रिव्यू (कौन सा सही, कौन गलत)
+        // ==========================================
+        function showReview() {
+            document.getElementById("leaderboard-screen").style.display = "none";
+            document.getElementById("review-screen").style.display = "block";
+            
+            const reviewContainer = document.getElementById("review-container");
+            reviewContainer.innerHTML = "";
+
+            questions.forEach((q, index) => {
+                const studentAns = userAnswers[index];
+                const isCorrect = studentAns === q.answer;
+                const isSkipped = studentAns === undefined;
+
+                let statusHTML = "";
+                let boxClass = "";
+
+                if (isSkipped) {
+                    statusHTML = `<span style="color:#7f8c8d; font-weight:bold;">❌ आपने यह सवाल छोड़ दिया</span>`;
+                    boxClass = "review-skipped";
+                } else if (isCorrect) {
+                    statusHTML = `<span style="color:#27ae60; font-weight:bold;">✅ आपका उत्तर सही है</span>`;
+                    boxClass = "review-correct";
+                } else {
+                    statusHTML = `<span style="color:#c0392b; font-weight:bold;">❌ गलत उत्तर (आपने चुना: ${studentAns})</span>`;
+                    boxClass = "review-wrong";
+                }
+
+                reviewContainer.innerHTML += `
+                    <div class="review-box ${boxClass}">
+                        <p style="margin-top:0; font-weight:bold; color:#333;">प्र. ${index + 1}: ${q.question}</p>
+                        <p style="margin:5px 0;">${statusHTML}</p>
+                        <p style="margin:0; color:#27ae60; font-weight:bold;">✔️ सही उत्तर: ${q.answer}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function backToLeaderboard() {
+            document.getElementById("review-screen").style.display = "none";
+            document.getElementById("leaderboard-screen").style.display = "block";
         }
     </script>
 </body>
