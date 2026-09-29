@@ -31,7 +31,7 @@
         #quiz-screen, #leaderboard-screen, #loading-screen, #review-screen { display: none; }
         
         .rank-list { text-align: left; padding: 0; list-style: none; margin-top: 15px;}
-        .rank-list li { background: #ecf0f1; margin: 6px 0; padding: 12px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between; border-left: 5px solid #27ae60;}
+        .rank-list li { background: #ecf0f1; margin: 6px 0; padding: 12px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between; border-left: 5px solid #bdc3c7;}
         
         .timer-box { font-size: 18px; font-weight: bold; color: #e74c3c; margin-bottom: 15px; border: 2px solid #e74c3c; padding: 5px 15px; border-radius: 5px; display: inline-block; background: #fdedec;}
         
@@ -44,7 +44,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-<!-- Right Click & Copy Disabled -->
 <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onpaste="return false;">
 
     <div id="watermark"></div>
@@ -94,14 +93,13 @@
         <h1>लाइव लीडरबोर्ड 🏆</h1>
         <h2 style="color: #27ae60; background:#e8f8f5; padding:10px; border-radius:5px;">आपका स्कोर: <span id="final-score"></span></h2>
         
-        <!-- नया बटन: सही-गलत देखने के लिए -->
         <button onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
         
         <ul class="rank-list" id="rankings"></ul>
         <button onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर जाएं</button>
     </div>
 
-    <!-- Review Screen (सही/गलत चेक करने के लिए) -->
+    <!-- Review Screen -->
     <div class="container" id="review-screen">
         <h1>टेस्ट रिपोर्ट (सही/गलत) 📊</h1>
         <div id="review-container" style="max-height: 400px; overflow-y: auto; padding-right:10px;"></div>
@@ -109,7 +107,6 @@
     </div>
 
     <script>
-        // Your Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCBwUnvVsCI5Fl05e8pwUeZwcGN0S1FFN4",
             authDomain: "bsebquiz-8d9cd.firebaseapp.com",
@@ -128,28 +125,27 @@
         let playerName = "";
         let selectedSubject = "";
         let selectedTestName = "";
+        let finalPlayerNameKey = "";
         
         let userAnswers = {}; 
         let isTakingTest = false;
         let timerInterval;
         let timeRemaining = 0;
+        let globalScore = 0;
 
-        // Anti-Copy (Keyboard Shortcuts Block)
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
             }
         });
 
-        // Strict Anti-Cheat (Tab Switch / App Minimise Detect)
         document.addEventListener("visibilitychange", function() {
             if (document.visibilityState === 'hidden' && isTakingTest) {
                 alert("⚠️ चीटिंग अलर्ट! आपने टेस्ट के दौरान टैब या स्क्रीन बदली। आपका टेस्ट तुरंत सबमिट किया जा रहा है।");
-                submitQuiz(true); // True means auto-submitted due to cheat
+                submitQuiz(true); 
             }
         });
 
-        // विषय लोड करना
         window.onload = function() {
             db.ref('Quizzes').on('value', (snapshot) => {
                 const subSelect = document.getElementById("studentSubject");
@@ -202,7 +198,6 @@
                 return;
             }
 
-            // Watermark On
             document.getElementById("watermark").style.display = "block";
             document.getElementById("watermark").innerText = (playerName + " 📱 ").repeat(300);
 
@@ -302,27 +297,33 @@
         }
 
         function submitQuiz(isCheat = false) {
+            if(!isTakingTest) return; // डबल सबमिट रोकने के लिए
             isTakingTest = false;
             clearInterval(timerInterval);
             document.getElementById("watermark").style.display = "none"; 
 
-            let score = 0;
+            let calculatedScore = 0;
             questions.forEach((q, index) => {
-                if(userAnswers[index] === q.answer) {
-                    score++;
+                let studentAns = userAnswers[index];
+                // .trim() का इस्तेमाल ताकि Space की वजह से आंसर गलत न हो
+                if(studentAns && q.answer && studentAns.trim() === q.answer.trim()) {
+                    calculatedScore++;
                 }
             });
+            globalScore = calculatedScore;
 
-            // अगर बच्चे ने चीटिंग की कोशिश की है तो नाम के आगे (Cheated) लगा दें
             let finalName = isCheat ? playerName + " (⚠️ Cheated)" : playerName;
+            // Firebase Key में स्पेशल कैरेक्टर नहीं हो सकते, इसलिए उन्हें हटाया जा रहा है
+            finalPlayerNameKey = finalName.replace(/[.#$\[\]\/]/g, "_");
 
             document.getElementById("quiz-screen").style.display = "none";
             document.getElementById("leaderboard-screen").style.display = "block";
-            document.getElementById("final-score").innerText = score + " / " + questions.length;
+            document.getElementById("final-score").innerText = globalScore + " / " + questions.length;
 
-            db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName).push({
+            // .set() का इस्तेमाल ताकि अगर बच्चा दोबारा टेस्ट दे तो नया स्कोर अपडेट हो जाए (डुप्लीकेट नाम न बने)
+            db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName + '/' + finalPlayerNameKey).set({
                 name: finalName,
-                score: score,
+                score: globalScore,
                 timestamp: Date.now()
             });
 
@@ -330,15 +331,23 @@
         }
 
         function showLiveLeaderboard() {
-            db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName).on('value', (snapshot) => {
+            const leaderboardRef = db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName);
+            leaderboardRef.off(); // पुराने लिसनर को बंद करें
+            
+            leaderboardRef.on('value', (snapshot) => {
                 const rankingsList = document.getElementById("rankings");
                 rankingsList.innerHTML = "";
                 let results = [];
                 
                 snapshot.forEach((child) => results.push(child.val()));
                 
-                // रैंक को सही तरीके से सॉर्ट करना (ज्यादा नंबर वाला ऊपर)
-                results.sort((a, b) => b.score - a.score);
+                // ज्यादा स्कोर वाले को ऊपर रखें, अगर स्कोर बराबर हो तो जिसने पहले दिया उसे ऊपर रखें
+                results.sort((a, b) => {
+                    if (b.score === a.score) {
+                        return a.timestamp - b.timestamp;
+                    }
+                    return b.score - a.score;
+                });
 
                 results.forEach((data, index) => {
                     const li = document.createElement("li");
@@ -347,15 +356,18 @@
                     else if(index === 1) rankIcon = "🥈";
                     else if(index === 2) rankIcon = "🥉";
 
+                    // जो बच्चा अभी टेस्ट दे रहा है, उसका नाम हाईलाइट करें
+                    if (data.name === playerName || data.name === playerName + " (⚠️ Cheated)") {
+                        li.style.backgroundColor = "#d5f5e3";
+                        li.style.borderLeft = "5px solid #27ae60";
+                    }
+
                     li.innerHTML = `<span>${rankIcon} ${data.name}</span> <span>${data.score} Marks</span>`;
                     rankingsList.appendChild(li);
                 });
             });
         }
 
-        // ==========================================
-        // नया फीचर: रिजल्ट रिव्यू (कौन सा सही, कौन गलत)
-        // ==========================================
         function showReview() {
             document.getElementById("leaderboard-screen").style.display = "none";
             document.getElementById("review-screen").style.display = "block";
@@ -365,8 +377,8 @@
 
             questions.forEach((q, index) => {
                 const studentAns = userAnswers[index];
-                const isCorrect = studentAns === q.answer;
-                const isSkipped = studentAns === undefined;
+                const isCorrect = studentAns && q.answer && studentAns.trim() === q.answer.trim();
+                const isSkipped = !studentAns;
 
                 let statusHTML = "";
                 let boxClass = "";
