@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Bulk Upload Test</title>
+    <title>Admin Panel - Pro Bulk Upload</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; text-align: center; }
         .container { max-width: 600px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        input, select, textarea { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; font-family: monospace;}
+        input, select, textarea { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        textarea { font-family: monospace; }
         button { background: #e74c3c; color: white; border: none; padding: 12px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; width: 100%; margin-top: 10px; font-weight:bold;}
         button:hover { background: #c0392b; }
         .success { color: green; display: none; margin-top: 10px; font-weight: bold;}
@@ -20,7 +21,7 @@
 <body>
 
     <div class="container">
-        <h1>Admin Panel 🛠️ (Bulk Upload)</h1>
+        <h1>Admin Panel 🛠️</h1>
         <p>विषय, टेस्ट का नाम, समय (मिनट में) और JSON कोड डालें</p>
         
         <select id="subjectSelect" onchange="checkNewSubject()">
@@ -31,10 +32,9 @@
             <option value="ADD_NEW" style="font-weight:bold; color:blue;">+ नया विषय जोड़ें...</option>
         </select>
 
-        <!-- यह बॉक्स तभी दिखेगा जब 'नया विषय जोड़ें' चुना जाएगा -->
         <input type="text" id="newSubjectInput" placeholder="नए विषय का नाम (जैसे: Physics_Class12)" style="display:none; border-color:blue;">
 
-        <input type="text" id="testName" placeholder="टेस्ट का नाम (जैसे: Full Syllabus Mock Test)">
+        <input type="text" id="testName" placeholder="टेस्ट का नाम (जैसे: Chapter 1 Mock Test)">
         <input type="number" id="testDuration" placeholder="टेस्ट का समय (मिनटों में, जैसे: 30)">
         
         <textarea id="bulkData" rows="10" placeholder="यहाँ प्रश्नों का JSON कोड पेस्ट करें..."></textarea>
@@ -58,27 +58,18 @@
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.database();
 
-        // नया विषय चुनने पर बॉक्स दिखाने/छुपाने का फंक्शन
         function checkNewSubject() {
             const selectValue = document.getElementById("subjectSelect").value;
             const newSubInput = document.getElementById("newSubjectInput");
-            if(selectValue === "ADD_NEW") {
-                newSubInput.style.display = "block";
-            } else {
-                newSubInput.style.display = "none";
-            }
+            newSubInput.style.display = (selectValue === "ADD_NEW") ? "block" : "none";
         }
 
         function saveBulkTest() {
             let subject = document.getElementById("subjectSelect").value;
             
-            // अगर नया विषय चुना गया है, तो उसका नाम लें
             if(subject === "ADD_NEW") {
-                subject = document.getElementById("newSubjectInput").value.trim().replace(/\s+/g, "_"); // स्पेस को _ में बदलें
-                if(subject === "") {
-                    alert("कृपया नए विषय का नाम लिखें!");
-                    return;
-                }
+                subject = document.getElementById("newSubjectInput").value.trim().replace(/\s+/g, "_");
+                if(subject === "") { alert("कृपया नए विषय का नाम लिखें!"); return; }
             }
 
             const testName = document.getElementById("testName").value.trim();
@@ -98,11 +89,7 @@
 
             try {
                 const questionsArray = JSON.parse(jsonText);
-                
-                const testData = {
-                    timer: parseInt(duration),
-                    questions: questionsArray
-                };
+                const testData = { timer: parseInt(duration), questions: questionsArray };
                 
                 db.ref('Quizzes/' + subject + '/' + testName).set(testData)
                 .then(() => {
@@ -110,8 +97,6 @@
                     document.getElementById("testDuration").value = "";
                     document.getElementById("bulkData").value = "";
                     document.getElementById("newSubjectInput").value = "";
-                    
-                    // अगर नया विषय जोड़ा था तो वापस डिफ़ॉल्ट पर सेट करें
                     document.getElementById("subjectSelect").selectedIndex = 0;
                     document.getElementById("newSubjectInput").style.display = "none";
 
@@ -121,9 +106,8 @@
                     msgError.innerText = "डेटाबेस एरर: " + error.message;
                     msgError.style.display = "block";
                 });
-
             } catch (e) {
-                msgError.innerText = "एरर! आपके द्वारा पेस्ट किया गया कोड सही (JSON) फॉर्मेट में नहीं है।";
+                msgError.innerText = "एरर! कोड सही JSON फॉर्मेट में नहीं है।";
                 msgError.style.display = "block";
             }
         }
