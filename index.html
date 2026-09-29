@@ -29,8 +29,7 @@
         .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px;}
         #quiz-screen, #leaderboard-screen, #loading-screen, #review-screen { display: none; }
         
-        /* Leaderboard Table Styles */
-        .rank-list { text-align: left; padding: 10px; list-style: none; margin: 0; max-height: 350px; overflow-y: auto; background: #fdfefe; border: 1px solid #ccc; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;}
+        .rank-list { text-align: left; padding: 10px; list-style: none; margin: 0; max-height: 400px; overflow-y: auto; background: #fdfefe; border: 1px solid #ccc; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;}
         .rank-list li { background: #ecf0f1; margin: 5px 0; padding: 12px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #bdc3c7; font-size: 15px;}
         .list-header { background: #2c3e50; color: white; padding: 12px; margin-top: 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between;}
         
@@ -103,7 +102,6 @@
         <h1>🏆 लाइव लीडरबोर्ड 🏆</h1>
         <div id="retake-msg" class="msg-box msg-warning" style="display: none;"></div>
         
-        <!-- Student's Personal Score Card -->
         <div class="my-score-card">
             <div>
                 <h3>आपका स्कोर</h3>
@@ -117,7 +115,6 @@
         
         <button id="review-btn" onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px; display: none;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
         
-        <!-- Global Leaderboard for All Students -->
         <div class="list-header">
             <span>रैंक & नाम</span>
             <span>अंक (Marks)</span>
@@ -130,12 +127,11 @@
     <!-- Review Screen -->
     <div class="container" id="review-screen">
         <h1>टेस्ट रिपोर्ट (सही/गलत) 📊</h1>
-        <div id="review-container" style="max-height: 400px; overflow-y: auto; padding-right:10px;"></div>
-        <button onclick="backToLeaderboard()" style="width:100%; margin-top:15px; background:#e67e22;">⬅ लीडरबोर्ड पर वापस जाएं</button>
+        <div id="review-container" style="max-height: 400px; overflow-y: auto; padding-right:10px; margin-bottom:15px;"></div>
+        <button onclick="backToLeaderboard()" style="width:100%; background:#e67e22;">⬅ लीडरबोर्ड पर वापस जाएं</button>
     </div>
 
     <script>
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyCBwUnvVsCI5Fl05e8pwUeZwcGN0S1FFN4",
             authDomain: "bsebquiz-8d9cd.firebaseapp.com",
@@ -166,13 +162,15 @@
         const FIVE_HOURS = 5 * 60 * 60 * 1000;
         const ONE_HOUR = 1 * 60 * 60 * 1000;
 
+        // Anti-Copy shortcuts
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey || e.metaKey) { e.preventDefault(); }
         });
 
+        // Anti-Cheat (Tab switch)
         document.addEventListener("visibilitychange", function() {
             if (document.visibilityState === 'hidden' && isTakingTest) {
-                alert("⚠️ चीटिंग अलर्ट! आपने टेस्ट के दौरान टैब या स्क्रीन बदली। आपका टेस्ट तुरंत सबमिट किया जा रहा है।");
+                alert("⚠️ चीटिंग अलर्ट! आपने टेस्ट के दौरान स्क्रीन बदली। टेस्ट सबमिट किया जा रहा है।");
                 submitQuiz(true); 
             }
         });
@@ -229,6 +227,7 @@
                 return;
             }
 
+            // Sanitizing name for Firebase Key
             finalPlayerNameKey = playerName.replace(/[.#$\[\]\/]/g, "_");
 
             document.getElementById("login-screen").style.display = "none";
@@ -258,6 +257,7 @@
             });
         }
 
+        // Silent Load for Users checking result before 5 hours
         function loadQuestionsSilently(studentData) {
             db.ref('Quizzes/' + selectedSubject + '/' + selectedTestName).once('value', (snapshot) => {
                 if (snapshot.exists()) {
@@ -334,14 +334,14 @@
             optionsContainer.innerHTML = "";
             
             q.options.forEach(opt => {
-                if(opt && opt.trim() !== "") {
+                if(opt && String(opt).trim() !== "") {
                     const btn = document.createElement("button");
                     btn.className = "option-btn";
-                    if(userAnswers[currentQIndex] === opt) {
+                    if(userAnswers[currentQIndex] === String(opt)) {
                         btn.classList.add("selected");
                     }
                     btn.innerText = opt;
-                    btn.onclick = () => selectOption(opt);
+                    btn.onclick = () => selectOption(String(opt));
                     optionsContainer.appendChild(btn);
                 }
             });
@@ -381,7 +381,7 @@
             let calculatedScore = 0;
             questions.forEach((q, index) => {
                 let studentAns = userAnswers[index];
-                if(studentAns && q.answer && studentAns.trim() === q.answer.trim()) {
+                if(studentAns && q.answer && String(studentAns).trim() === String(q.answer).trim()) {
                     calculatedScore++;
                 }
             });
@@ -390,7 +390,7 @@
             testTimestamp = Date.now();
             let finalName = isCheat ? playerName + " (⚠️ Cheated)" : playerName;
 
-            // Database me data save karna (Duplicate nahi banega, replace hoga)
+            // Database me Data Replace/Save karna
             db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName + '/' + finalPlayerNameKey).set({
                 name: finalName,
                 score: globalScore,
@@ -406,9 +406,9 @@
             document.getElementById("quiz-screen").style.display = "none";
             document.getElementById("leaderboard-screen").style.display = "block";
             
-            document.getElementById("final-score").innerText = globalScore + "/" + questions.length;
+            document.getElementById("final-score").innerText = globalScore + " / " + questions.length;
 
-            // 1 Ghante tak Review button dikhana
+            // 1 Hour Review Window
             const timePassed = Date.now() - testTimestamp;
             if (timePassed < ONE_HOUR) {
                 document.getElementById("review-btn").style.display = "block";
@@ -426,7 +426,7 @@
                 
                 snapshot.forEach((child) => results.push(child.val()));
                 
-                // Sorting logic
+                // Score Descending, Timestamp Ascending
                 results.sort((a, b) => {
                     if (b.score === a.score) return a.timestamp - b.timestamp;
                     return b.score - a.score;
@@ -442,18 +442,17 @@
                     else if(rankNum === 2) rankIcon = "🥈 2nd";
                     else if(rankNum === 3) rankIcon = "🥉 3rd";
 
-                    // Highlight Current User and Save Rank
+                    // Current User Match
                     if (data.name === playerName || data.name === playerName + " (⚠️ Cheated)") {
                         li.style.backgroundColor = "#d5f5e3";
                         li.style.borderLeft = "5px solid #27ae60";
                         myRank = rankNum;
                     }
 
-                    li.innerHTML = `<span><span style="color:#e74c3c; font-weight:bold;">${rankIcon}</span> &nbsp; ${data.name}</span> <span style="background:#27ae60; color:white; padding:4px 10px; border-radius:15px;">${data.score} Marks</span>`;
+                    li.innerHTML = `<span><span style="color:#e74c3c; font-weight:bold;">${rankIcon}</span> &nbsp; ${data.name}</span> <span style="background:#27ae60; color:white; padding:4px 10px; border-radius:15px;">${data.score}</span>`;
                     rankingsList.appendChild(li);
                 });
 
-                // Update my rank at the top
                 document.getElementById("my-rank").innerText = "#" + myRank;
             });
         }
@@ -467,7 +466,7 @@
 
             questions.forEach((q, index) => {
                 const studentAns = userAnswers[index];
-                const isCorrect = studentAns && q.answer && studentAns.trim() === q.answer.trim();
+                const isCorrect = studentAns && q.answer && String(studentAns).trim() === String(q.answer).trim();
                 const isSkipped = !studentAns;
 
                 let statusHTML = "";
