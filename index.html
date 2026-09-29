@@ -5,24 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BSEB Pro Test Platform</title>
     <style>
-        /* Strict Anti-Copy & Security CSS */
         body { 
             font-family: 'Arial', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; 
             user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
         }
         
-        /* Watermark CSS */
         #watermark { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; 
-            pointer-events: none; opacity: 0.05; font-size: 24px; transform: rotate(-30deg); 
+            pointer-events: none; opacity: 0.04; font-size: 24px; transform: rotate(-30deg); 
             overflow: hidden; white-space: pre-wrap; color: #000; font-weight: bold; display: none;
         }
 
         .container { max-width: 600px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; z-index: 10; }
         h1 { color: #2c3e50; font-size: 24px;}
         input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        button { background: #27ae60; color: white; border: none; padding: 10px 15px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 5px; font-weight:bold;}
+        button { background: #27ae60; color: white; border: none; padding: 12px 15px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 5px; font-weight:bold;}
         button:hover { background: #219150; }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
         
         .option-btn { display: block; width: 100%; background: #ecf0f1; color: #333; margin-bottom: 10px; text-align: left; padding: 15px; border: 2px solid #bdc3c7; border-radius:5px;}
         .option-btn.selected { background: #3498db; color: white; border-color: #2980b9;}
@@ -30,8 +29,10 @@
         .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px;}
         #quiz-screen, #leaderboard-screen, #loading-screen, #review-screen { display: none; }
         
-        .rank-list { text-align: left; padding: 0; list-style: none; margin-top: 15px;}
-        .rank-list li { background: #ecf0f1; margin: 6px 0; padding: 12px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between; border-left: 5px solid #bdc3c7;}
+        /* Leaderboard Table Styles */
+        .rank-list { text-align: left; padding: 10px; list-style: none; margin: 0; max-height: 350px; overflow-y: auto; background: #fdfefe; border: 1px solid #ccc; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;}
+        .rank-list li { background: #ecf0f1; margin: 5px 0; padding: 12px; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #bdc3c7; font-size: 15px;}
+        .list-header { background: #2c3e50; color: white; padding: 12px; margin-top: 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between;}
         
         .timer-box { font-size: 18px; font-weight: bold; color: #e74c3c; margin-bottom: 15px; border: 2px solid #e74c3c; padding: 5px 15px; border-radius: 5px; display: inline-block; background: #fdedec;}
         
@@ -39,6 +40,15 @@
         .review-correct { background-color: #e8f8f5; border-left: 5px solid #2ecc71;}
         .review-wrong { background-color: #fdedec; border-left: 5px solid #e74c3c;}
         .review-skipped { background-color: #f2f2f2; border-left: 5px solid #95a5a6;}
+
+        .msg-box { font-size: 14px; font-weight: bold; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
+        .msg-warning { background: #fcf3cf; color: #b7950b; border: 1px solid #f1c40f; }
+        .msg-danger { background: #fdedec; color: #c0392b; border: 1px solid #e74c3c; }
+        
+        .my-score-card { background:#e8f8f5; padding:15px; border-radius:8px; border: 2px solid #27ae60; margin-bottom: 15px; display: flex; justify-content: space-around; align-items: center;}
+        .my-score-card div { text-align: center; }
+        .my-score-card h3 { margin: 0; color: #2c3e50; font-size: 16px;}
+        .my-score-card h2 { margin: 5px 0 0 0; color: #27ae60; font-size: 26px;}
     </style>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -51,10 +61,10 @@
     <!-- Login Screen -->
     <div class="container" id="login-screen">
         <h1>ऑनलाइन टेस्ट (Pro Platform)</h1>
-        <p style="color:red; font-size: 13px; font-weight: bold; border: 1px solid red; padding:5px; border-radius:5px;">
-            ⚠️ चेतावनी: टेस्ट के दौरान कॉल उठाने, टैब बदलने या ऐप से बाहर जाने पर टेस्ट अपने-आप सबमिट हो जाएगा।
-        </p>
-        <input type="text" id="studentName" placeholder="अपना पूरा नाम लिखें...">
+        <div class="msg-box msg-danger">
+            ⚠️ चेतावनी: टेस्ट के दौरान स्क्रीन बदलने या ऐप से बाहर जाने पर टेस्ट अपने-आप सबमिट हो जाएगा।
+        </div>
+        <input type="text" id="studentName" placeholder="अपना पूरा नाम लिखें (उदा. Rahul Kumar)">
         
         <select id="studentSubject" onchange="loadAvailableTests()">
             <option value="">-- विषय लोड हो रहे हैं... --</option>
@@ -64,12 +74,12 @@
             <option value="">-- पहले विषय चुनें --</option>
         </select>
 
-        <button onclick="startTest()" style="width:100%; padding:15px; font-size: 18px;">टेस्ट शुरू करें</button>
+        <button onclick="checkStudentStatus()" style="width:100%; padding:15px; font-size: 18px;">टेस्ट शुरू करें</button>
     </div>
 
     <!-- Loading Screen -->
     <div class="container" id="loading-screen">
-        <h2>कृपया प्रतीक्षा करें...</h2>
+        <h2 id="loading-text">कृपया प्रतीक्षा करें...</h2>
     </div>
 
     <!-- Quiz Screen -->
@@ -90,23 +100,42 @@
 
     <!-- Leaderboard Screen -->
     <div class="container" id="leaderboard-screen">
-        <h1>लाइव लीडरबोर्ड 🏆</h1>
-        <h2 style="color: #27ae60; background:#e8f8f5; padding:10px; border-radius:5px;">आपका स्कोर: <span id="final-score"></span></h2>
+        <h1>🏆 लाइव लीडरबोर्ड 🏆</h1>
+        <div id="retake-msg" class="msg-box msg-warning" style="display: none;"></div>
         
-        <button onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
+        <!-- Student's Personal Score Card -->
+        <div class="my-score-card">
+            <div>
+                <h3>आपका स्कोर</h3>
+                <h2 id="final-score">0/0</h2>
+            </div>
+            <div>
+                <h3>आपकी रैंक</h3>
+                <h2 id="my-rank">#0</h2>
+            </div>
+        </div>
         
+        <button id="review-btn" onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px; display: none;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
+        
+        <!-- Global Leaderboard for All Students -->
+        <div class="list-header">
+            <span>रैंक & नाम</span>
+            <span>अंक (Marks)</span>
+        </div>
         <ul class="rank-list" id="rankings"></ul>
-        <button onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर जाएं</button>
+        
+        <button onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर वापस जाएं</button>
     </div>
 
     <!-- Review Screen -->
     <div class="container" id="review-screen">
         <h1>टेस्ट रिपोर्ट (सही/गलत) 📊</h1>
         <div id="review-container" style="max-height: 400px; overflow-y: auto; padding-right:10px;"></div>
-        <button onclick="backToLeaderboard()" style="width:100%; margin-top:15px;">⬅ लीडरबोर्ड पर वापस जाएं</button>
+        <button onclick="backToLeaderboard()" style="width:100%; margin-top:15px; background:#e67e22;">⬅ लीडरबोर्ड पर वापस जाएं</button>
     </div>
 
     <script>
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyCBwUnvVsCI5Fl05e8pwUeZwcGN0S1FFN4",
             authDomain: "bsebquiz-8d9cd.firebaseapp.com",
@@ -123,20 +152,22 @@
         let questions = [];
         let currentQIndex = 0;
         let playerName = "";
+        let finalPlayerNameKey = "";
         let selectedSubject = "";
         let selectedTestName = "";
-        let finalPlayerNameKey = "";
         
         let userAnswers = {}; 
         let isTakingTest = false;
         let timerInterval;
         let timeRemaining = 0;
         let globalScore = 0;
+        let testTimestamp = 0;
+
+        const FIVE_HOURS = 5 * 60 * 60 * 1000;
+        const ONE_HOUR = 1 * 60 * 60 * 1000;
 
         document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                e.preventDefault();
-            }
+            if (e.ctrlKey || e.metaKey) { e.preventDefault(); }
         });
 
         document.addEventListener("visibilitychange", function() {
@@ -188,7 +219,7 @@
             });
         }
 
-        function startTest() {
+        function checkStudentStatus() {
             playerName = document.getElementById("studentName").value.trim();
             selectedSubject = document.getElementById("studentSubject").value;
             selectedTestName = document.getElementById("testNameSelect").value;
@@ -198,16 +229,58 @@
                 return;
             }
 
-            document.getElementById("watermark").style.display = "block";
-            document.getElementById("watermark").innerText = (playerName + " 📱 ").repeat(300);
+            finalPlayerNameKey = playerName.replace(/[.#$\[\]\/]/g, "_");
 
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("loading-screen").style.display = "block";
+            document.getElementById("loading-text").innerText = "डेटा चेक किया जा रहा है...";
+
+            db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName + '/' + finalPlayerNameKey).once('value', (snap) => {
+                if (snap.exists()) {
+                    const data = snap.val();
+                    const elapsed = Date.now() - data.timestamp;
+
+                    if (elapsed < FIVE_HOURS) {
+                        let hoursLeft = Math.ceil((FIVE_HOURS - elapsed) / (1000 * 60 * 60));
+                        document.getElementById("retake-msg").innerText = `आप यह टेस्ट ${hoursLeft} घंटे बाद दोबारा दे सकते हैं।`;
+                        document.getElementById("retake-msg").style.display = "block";
+                        
+                        loadQuestionsSilently(data); 
+                    } else {
+                        startFreshTest();
+                    }
+                } else {
+                    startFreshTest();
+                }
+            }).catch(e => {
+                alert("नेटवर्क एरर। पेज रिफ्रेश करें।");
+                location.reload();
+            });
+        }
+
+        function loadQuestionsSilently(studentData) {
+            db.ref('Quizzes/' + selectedSubject + '/' + selectedTestName).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    questions = Array.isArray(data) ? data : data.questions;
+                    
+                    globalScore = studentData.score;
+                    userAnswers = studentData.answers || {}; 
+                    testTimestamp = studentData.timestamp;
+
+                    showLeaderboardDirectly();
+                }
+            });
+        }
+
+        function startFreshTest() {
+            document.getElementById("watermark").style.display = "block";
+            document.getElementById("watermark").innerText = (playerName + " 📱 ").repeat(300);
+            document.getElementById("loading-text").innerText = "टेस्ट लोड हो रहा है...";
 
             db.ref('Quizzes/' + selectedSubject + '/' + selectedTestName).once('value', (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    
                     if(Array.isArray(data)) {
                         questions = data;
                         timeRemaining = questions.length * 60; 
@@ -216,6 +289,9 @@
                         timeRemaining = data.timer * 60; 
                     }
 
+                    userAnswers = {}; 
+                    currentQIndex = 0;
+                    
                     document.getElementById("loading-screen").style.display = "none";
                     document.getElementById("quiz-screen").style.display = "block";
                     document.getElementById("test-title").innerText = selectedTestName;
@@ -251,8 +327,8 @@
             document.getElementById("question-text").innerText = q.question;
             document.getElementById("q-number").innerText = currentQIndex + 1;
             
-            document.getElementById("prev-btn").style.visibility = (currentQIndex === 0) ? "hidden" : "visible";
-            document.getElementById("next-btn").style.visibility = (currentQIndex === questions.length - 1) ? "hidden" : "visible";
+            document.getElementById("prev-btn").disabled = (currentQIndex === 0);
+            document.getElementById("next-btn").disabled = (currentQIndex === questions.length - 1);
 
             const optionsContainer = document.getElementById("options-container");
             optionsContainer.innerHTML = "";
@@ -297,7 +373,7 @@
         }
 
         function submitQuiz(isCheat = false) {
-            if(!isTakingTest) return; // डबल सबमिट रोकने के लिए
+            if(!isTakingTest) return; 
             isTakingTest = false;
             clearInterval(timerInterval);
             document.getElementById("watermark").style.display = "none"; 
@@ -305,34 +381,43 @@
             let calculatedScore = 0;
             questions.forEach((q, index) => {
                 let studentAns = userAnswers[index];
-                // .trim() का इस्तेमाल ताकि Space की वजह से आंसर गलत न हो
                 if(studentAns && q.answer && studentAns.trim() === q.answer.trim()) {
                     calculatedScore++;
                 }
             });
+            
             globalScore = calculatedScore;
-
+            testTimestamp = Date.now();
             let finalName = isCheat ? playerName + " (⚠️ Cheated)" : playerName;
-            // Firebase Key में स्पेशल कैरेक्टर नहीं हो सकते, इसलिए उन्हें हटाया जा रहा है
-            finalPlayerNameKey = finalName.replace(/[.#$\[\]\/]/g, "_");
 
-            document.getElementById("quiz-screen").style.display = "none";
-            document.getElementById("leaderboard-screen").style.display = "block";
-            document.getElementById("final-score").innerText = globalScore + " / " + questions.length;
-
-            // .set() का इस्तेमाल ताकि अगर बच्चा दोबारा टेस्ट दे तो नया स्कोर अपडेट हो जाए (डुप्लीकेट नाम न बने)
+            // Database me data save karna (Duplicate nahi banega, replace hoga)
             db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName + '/' + finalPlayerNameKey).set({
                 name: finalName,
                 score: globalScore,
-                timestamp: Date.now()
+                timestamp: testTimestamp,
+                answers: userAnswers
+            }).then(() => {
+                showLeaderboardDirectly();
             });
-
-            showLiveLeaderboard();
         }
 
-        function showLiveLeaderboard() {
+        function showLeaderboardDirectly() {
+            document.getElementById("loading-screen").style.display = "none";
+            document.getElementById("quiz-screen").style.display = "none";
+            document.getElementById("leaderboard-screen").style.display = "block";
+            
+            document.getElementById("final-score").innerText = globalScore + "/" + questions.length;
+
+            // 1 Ghante tak Review button dikhana
+            const timePassed = Date.now() - testTimestamp;
+            if (timePassed < ONE_HOUR) {
+                document.getElementById("review-btn").style.display = "block";
+            } else {
+                document.getElementById("review-btn").style.display = "none";
+            }
+
             const leaderboardRef = db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName);
-            leaderboardRef.off(); // पुराने लिसनर को बंद करें
+            leaderboardRef.off(); 
             
             leaderboardRef.on('value', (snapshot) => {
                 const rankingsList = document.getElementById("rankings");
@@ -341,30 +426,35 @@
                 
                 snapshot.forEach((child) => results.push(child.val()));
                 
-                // ज्यादा स्कोर वाले को ऊपर रखें, अगर स्कोर बराबर हो तो जिसने पहले दिया उसे ऊपर रखें
+                // Sorting logic
                 results.sort((a, b) => {
-                    if (b.score === a.score) {
-                        return a.timestamp - b.timestamp;
-                    }
+                    if (b.score === a.score) return a.timestamp - b.timestamp;
                     return b.score - a.score;
                 });
 
+                let myRank = "N/A";
+
                 results.forEach((data, index) => {
                     const li = document.createElement("li");
-                    let rankIcon = `#${index + 1}`;
-                    if(index === 0) rankIcon = "🥇";
-                    else if(index === 1) rankIcon = "🥈";
-                    else if(index === 2) rankIcon = "🥉";
+                    let rankNum = index + 1;
+                    let rankIcon = `#${rankNum}`;
+                    if(rankNum === 1) rankIcon = "🥇 1st";
+                    else if(rankNum === 2) rankIcon = "🥈 2nd";
+                    else if(rankNum === 3) rankIcon = "🥉 3rd";
 
-                    // जो बच्चा अभी टेस्ट दे रहा है, उसका नाम हाईलाइट करें
+                    // Highlight Current User and Save Rank
                     if (data.name === playerName || data.name === playerName + " (⚠️ Cheated)") {
                         li.style.backgroundColor = "#d5f5e3";
                         li.style.borderLeft = "5px solid #27ae60";
+                        myRank = rankNum;
                     }
 
-                    li.innerHTML = `<span>${rankIcon} ${data.name}</span> <span>${data.score} Marks</span>`;
+                    li.innerHTML = `<span><span style="color:#e74c3c; font-weight:bold;">${rankIcon}</span> &nbsp; ${data.name}</span> <span style="background:#27ae60; color:white; padding:4px 10px; border-radius:15px;">${data.score} Marks</span>`;
                     rankingsList.appendChild(li);
                 });
+
+                // Update my rank at the top
+                document.getElementById("my-rank").innerText = "#" + myRank;
             });
         }
 
@@ -384,7 +474,7 @@
                 let boxClass = "";
 
                 if (isSkipped) {
-                    statusHTML = `<span style="color:#7f8c8d; font-weight:bold;">❌ आपने यह सवाल छोड़ दिया</span>`;
+                    statusHTML = `<span style="color:#7f8c8d; font-weight:bold;">❌ आपने यह सवाल छोड़ दिया</span>`;
                     boxClass = "review-skipped";
                 } else if (isCorrect) {
                     statusHTML = `<span style="color:#27ae60; font-weight:bold;">✅ आपका उत्तर सही है</span>`;
