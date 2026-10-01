@@ -48,6 +48,14 @@
         .my-score-card div { text-align: center; }
         .my-score-card h3 { margin: 0; color: #2c3e50; font-size: 16px;}
         .my-score-card h2 { margin: 5px 0 0 0; color: #27ae60; font-size: 26px;}
+
+        /* PDF Print Setting - जब PDF सेव होगा तो फालतू बटन छिप जाएंगे */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; max-width: 100%; border-radius: 0; }
+            .rank-list { max-height: none; overflow: visible; }
+        }
     </style>
     
     <!-- Firebase Scripts -->
@@ -117,10 +125,11 @@
             </div>
         </div>
         
-        <!-- NEW: Download PDF Button -->
-        <button id="pdf-btn" onclick="downloadPDF()" style="width:100%; background:#8e44ad; margin-bottom: 15px;">📥 रिजल्ट का PDF डाउनलोड करें</button>
+        <!-- PDF Download Button (With no-print class) -->
+        <button class="no-print" id="pdf-btn" onclick="downloadPDF()" style="width:100%; background:#8e44ad; margin-bottom: 15px;">📥 रिजल्ट का PDF डाउनलोड करें</button>
         
-        <button id="review-btn" onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px; display: none;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
+        <!-- Review Button (With no-print class) -->
+        <button class="no-print" id="review-btn" onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px; display: none;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
         
         <div class="list-header">
             <span>रैंक & नाम</span>
@@ -128,14 +137,14 @@
         </div>
         <ul class="rank-list" id="rankings"></ul>
         
-        <button id="home-btn" onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर वापस जाएं</button>
+        <button class="no-print" id="home-btn" onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर वापस जाएं</button>
     </div>
 
     <!-- Review Screen -->
     <div class="container" id="review-screen">
-        <h1>टेस्ट रिपोर्ट (सही/गलत) 📊</h1>
-        <div id="review-container" style="max-height: 400px; overflow-y: auto; padding-right:10px; margin-bottom:15px;"></div>
-        <button onclick="backToLeaderboard()" style="width:100%; background:#e67e22;">⬅ लीडरबोर्ड पर वापस जाएं</button>
+        <h1 class="no-print">टेस्ट रिपोर्ट (सही/गलत) 📊</h1>
+        <div id="review-container" style="max-height: 400px; overflow-y: auto; padding-right:10px; margin-bottom:15px; text-align:left;"></div>
+        <button class="no-print" onclick="backToLeaderboard()" style="width:100%; background:#e67e22;">⬅ लीडरबोर्ड पर वापस जाएं</button>
     </div>
 
     <script>
@@ -155,7 +164,7 @@
         let questions = [];
         let currentQIndex = 0;
         let playerName = "";
-        let finalPlayerNameKey = "";
+        let finalPlayerNameKey = ""; 
         let selectedSubject = "";
         let selectedTestName = "";
         
@@ -389,10 +398,11 @@
                 }
             });
             
-            globalScore = calculatedScore;
+            globalScore = parseInt(calculatedScore); // Score Number Format Me Fix
             testTimestamp = Date.now();
             let finalName = isCheat ? playerName + " (⚠️ Cheated)" : playerName;
 
+            // Save Data in Firebase
             db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName + '/' + finalPlayerNameKey).set({
                 name: finalName,
                 score: globalScore,
@@ -425,8 +435,13 @@
                 rankingsList.innerHTML = "";
                 let results = [];
                 
-                snapshot.forEach((child) => results.push(child.val()));
+                snapshot.forEach((child) => {
+                    let data = child.val();
+                    data.idKey = child.key; // NEW: RANK BUG FIX - Unique Key Store
+                    results.push(data);
+                });
                 
+                // Sorting Logic: Higher Score gets Top Rank. If same score, earlier timestamp gets priority.
                 results.sort((a, b) => {
                     if (b.score === a.score) return a.timestamp - b.timestamp;
                     return b.score - a.score;
@@ -442,7 +457,8 @@
                     else if(rankNum === 2) rankIcon = "🥈 2nd";
                     else if(rankNum === 3) rankIcon = "🥉 3rd";
 
-                    if (data.name === playerName || data.name === playerName + " (⚠️️ Cheated)") {
+                    // RANK UPDATE FIX: Match with Unique Key (idKey)
+                    if (data.idKey === finalPlayerNameKey) {
                         li.style.backgroundColor = "#d5f5e3";
                         li.style.borderLeft = "5px solid #27ae60";
                         myRank = rankNum;
@@ -498,39 +514,33 @@
         }
 
         // ==========================================
-        // NEW: PDF Download Function
+        // PRO PDF DOWNLOAD FUNCTION (BULLETPROOF)
         // ==========================================
         function downloadPDF() {
-            const element = document.getElementById('leaderboard-screen');
-            
-            // PDF बनाने से पहले बटनों को छुपा दें ताकि वे PDF में प्रिंट न हों
-            document.getElementById('pdf-btn').style.display = 'none';
-            document.getElementById('home-btn').style.display = 'none';
-            const reviewBtn = document.getElementById('review-btn');
-            if (reviewBtn) reviewBtn.style.display = 'none';
-            document.getElementById('retake-msg').style.display = 'none';
+            // Option 1: Try HTML2PDF Library
+            try {
+                if (typeof html2pdf !== 'undefined') {
+                    const element = document.getElementById('leaderboard-screen');
+                    
+                    const opt = {
+                        margin: 0.3,
+                        filename: selectedTestName + '_Leaderboard.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true },
+                        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                    };
 
-            // PDF की सेटिंग्स (A4 साइज़)
-            const opt = {
-                margin:       0.3,
-                filename:     selectedSubject + '_' + selectedTestName + '_Result.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
-
-            // PDF जेनरेट और सेव करें
-            html2pdf().set(opt).from(element).save().then(() => {
-                // PDF डाउनलोड होने के बाद बटनों को वापस दिखाएं
-                document.getElementById('pdf-btn').style.display = 'block';
-                document.getElementById('home-btn').style.display = 'block';
-                
-                // अगर 1 घंटा नहीं बीता है तो रिव्यू बटन भी दिखाएं
-                const timePassed = Date.now() - testTimestamp;
-                if (timePassed < ONE_HOUR) {
-                    if (reviewBtn) reviewBtn.style.display = 'block';
+                    html2pdf().set(opt).from(element).save().catch((err) => {
+                        // Option 2: Fallback to Native Print (अगर Library फेल हो जाए)
+                        window.print();
+                    });
+                } else {
+                    window.print();
                 }
-            });
+            } catch (error) {
+                // Option 3: Absolute Fallback
+                window.print();
+            }
         }
     </script>
 </body>
