@@ -50,8 +50,12 @@
         .my-score-card h2 { margin: 5px 0 0 0; color: #27ae60; font-size: 26px;}
     </style>
     
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <!-- PDF Generator Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onpaste="return false;">
 
@@ -113,6 +117,9 @@
             </div>
         </div>
         
+        <!-- NEW: Download PDF Button -->
+        <button id="pdf-btn" onclick="downloadPDF()" style="width:100%; background:#8e44ad; margin-bottom: 15px;">📥 रिजल्ट का PDF डाउनलोड करें</button>
+        
         <button id="review-btn" onclick="showReview()" style="width:100%; background:#3498db; margin-bottom: 15px; display: none;">🔍 देखें कौन सा सवाल सही/गलत हुआ</button>
         
         <div class="list-header">
@@ -121,7 +128,7 @@
         </div>
         <ul class="rank-list" id="rankings"></ul>
         
-        <button onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर वापस जाएं</button>
+        <button id="home-btn" onclick="location.reload()" style="margin-top:20px; background:#e67e22; width:100%;">होम पेज पर वापस जाएं</button>
     </div>
 
     <!-- Review Screen -->
@@ -162,12 +169,10 @@
         const FIVE_HOURS = 5 * 60 * 60 * 1000;
         const ONE_HOUR = 1 * 60 * 60 * 1000;
 
-        // Anti-Copy shortcuts
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey || e.metaKey) { e.preventDefault(); }
         });
 
-        // Anti-Cheat (Tab switch)
         document.addEventListener("visibilitychange", function() {
             if (document.visibilityState === 'hidden' && isTakingTest) {
                 alert("⚠️ चीटिंग अलर्ट! आपने टेस्ट के दौरान स्क्रीन बदली। टेस्ट सबमिट किया जा रहा है।");
@@ -227,7 +232,6 @@
                 return;
             }
 
-            // Sanitizing name for Firebase Key
             finalPlayerNameKey = playerName.replace(/[.#$\[\]\/]/g, "_");
 
             document.getElementById("login-screen").style.display = "none";
@@ -257,7 +261,6 @@
             });
         }
 
-        // Silent Load for Users checking result before 5 hours
         function loadQuestionsSilently(studentData) {
             db.ref('Quizzes/' + selectedSubject + '/' + selectedTestName).once('value', (snapshot) => {
                 if (snapshot.exists()) {
@@ -390,7 +393,6 @@
             testTimestamp = Date.now();
             let finalName = isCheat ? playerName + " (⚠️ Cheated)" : playerName;
 
-            // Database me Data Replace/Save karna
             db.ref('Leaderboard/' + selectedSubject + '/' + selectedTestName + '/' + finalPlayerNameKey).set({
                 name: finalName,
                 score: globalScore,
@@ -408,7 +410,6 @@
             
             document.getElementById("final-score").innerText = globalScore + " / " + questions.length;
 
-            // 1 Hour Review Window
             const timePassed = Date.now() - testTimestamp;
             if (timePassed < ONE_HOUR) {
                 document.getElementById("review-btn").style.display = "block";
@@ -426,7 +427,6 @@
                 
                 snapshot.forEach((child) => results.push(child.val()));
                 
-                // Score Descending, Timestamp Ascending
                 results.sort((a, b) => {
                     if (b.score === a.score) return a.timestamp - b.timestamp;
                     return b.score - a.score;
@@ -442,8 +442,7 @@
                     else if(rankNum === 2) rankIcon = "🥈 2nd";
                     else if(rankNum === 3) rankIcon = "🥉 3rd";
 
-                    // Current User Match
-                    if (data.name === playerName || data.name === playerName + " (⚠️ Cheated)") {
+                    if (data.name === playerName || data.name === playerName + " (⚠️️ Cheated)") {
                         li.style.backgroundColor = "#d5f5e3";
                         li.style.borderLeft = "5px solid #27ae60";
                         myRank = rankNum;
@@ -473,7 +472,7 @@
                 let boxClass = "";
 
                 if (isSkipped) {
-                    statusHTML = `<span style="color:#7f8c8d; font-weight:bold;">❌ आपने यह सवाल छोड़ दिया</span>`;
+                    statusHTML = `<span style="color:#7f8c8d; font-weight:bold;">❌ आपने यह सवाल छोड़ दिया</span>`;
                     boxClass = "review-skipped";
                 } else if (isCorrect) {
                     statusHTML = `<span style="color:#27ae60; font-weight:bold;">✅ आपका उत्तर सही है</span>`;
@@ -496,6 +495,42 @@
         function backToLeaderboard() {
             document.getElementById("review-screen").style.display = "none";
             document.getElementById("leaderboard-screen").style.display = "block";
+        }
+
+        // ==========================================
+        // NEW: PDF Download Function
+        // ==========================================
+        function downloadPDF() {
+            const element = document.getElementById('leaderboard-screen');
+            
+            // PDF बनाने से पहले बटनों को छुपा दें ताकि वे PDF में प्रिंट न हों
+            document.getElementById('pdf-btn').style.display = 'none';
+            document.getElementById('home-btn').style.display = 'none';
+            const reviewBtn = document.getElementById('review-btn');
+            if (reviewBtn) reviewBtn.style.display = 'none';
+            document.getElementById('retake-msg').style.display = 'none';
+
+            // PDF की सेटिंग्स (A4 साइज़)
+            const opt = {
+                margin:       0.3,
+                filename:     selectedSubject + '_' + selectedTestName + '_Result.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            // PDF जेनरेट और सेव करें
+            html2pdf().set(opt).from(element).save().then(() => {
+                // PDF डाउनलोड होने के बाद बटनों को वापस दिखाएं
+                document.getElementById('pdf-btn').style.display = 'block';
+                document.getElementById('home-btn').style.display = 'block';
+                
+                // अगर 1 घंटा नहीं बीता है तो रिव्यू बटन भी दिखाएं
+                const timePassed = Date.now() - testTimestamp;
+                if (timePassed < ONE_HOUR) {
+                    if (reviewBtn) reviewBtn.style.display = 'block';
+                }
+            });
         }
     </script>
 </body>
